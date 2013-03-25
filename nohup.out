@@ -1,0 +1,10 @@
+/sw/bin/python: line 3: 58508 Terminated              python2.7 "$@"
+Traceback (most recent call last):
+  File "dmv.py", line 168, in <module>
+    minutes = int(mod_line.split(":")[0])*60+int(mod_line.split(":")[1])
+IndexError: list index out of range
+  File "dmv.py", line 175
+    if '***' not in mod_line and ':' in mod_line::
+                                                 ^
+SyntaxError: invalid syntax
+/sw/bin/python: line 3: 91963 Terminated              python2.7 "$@"
