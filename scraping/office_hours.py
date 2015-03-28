@@ -31,7 +31,7 @@ def is_holiday(dt):
 def is_open(office,dt):
   wkstr = office['officeHours']
   #Convert the DMV's listed hours into a list by day.
-  week = ['n' if d == 'n' else d.split('-') for d in wstr.split(',')]
+  week = ['n' if d == 'n' else d.split('-') for d in wkstr.split(',')]
   #This is quick so check it first
   if len(week[dt.weekday()]) < 2:
     return False

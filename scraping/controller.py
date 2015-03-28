@@ -1,9 +1,14 @@
 import argparse
+import datetime
 import time
+
+import numpy as np
+import pandas as pd
+
+#In this folder
+import scrape
 import update_offices as upoff
 import office_hours as oh
-import scrape
-import numpy as np
 
 #Selenium attempt
 from selenium import webdriver
@@ -19,9 +24,9 @@ args = parser.parse_args()
 
 
 #Create the two data frames
-temp_name = update_offices.update_offices()[1]
-appt =  pd.DataFrame(columns=list(name.keys()),dtype=int)
-non =  pd.DataFrame(columns=list(name.keys()),dtype=int)
+temp_name = upoff.update_offices()[1]
+appt_df = pd.DataFrame(index=[datetime.datetime.now()], columns=list(temp_name.keys()),dtype=int)
+non_df = pd.DataFrame(index=[datetime.datetime.now()], columns=list(temp_name.keys()),dtype=int)
 temp_name = False
 
 by_id = False 
@@ -35,46 +40,43 @@ invfrequency = 30
 secs_to_sleep = 0 
 while True:
   if(new_week):
-    if appt.shape[0] != 0:
+    if appt_df.shape[0] != 0:
       date_string = datetime.datetime.now().strftime('%Y-%m-%d') 
-      appt.to_hdf('appt-'+date_string+'.hdf','table',mode='w')
-      appt.to_hdf('non-'+date_string+'.hdf','table',mode='w')
+      appt_df.to_hdf('appt-'+date_string+'.hdf','table',mode='w')
+      non_df.to_hdf('non-'+date_string+'.hdf','table',mode='w')
     #Obtain office data 
-    by_id, by_name, update  = update_offices.update_offices(by_id)
+    by_id, by_name, update  = upoff.update_offices(by_id)
     wkdy_open,wkdy_close = oh.open_close(by_id)
     new_week = False
   
   curdt = datetime.datetime.now()
-  day = curtime.weekday()
+  day = curdt.weekday()
   curtime = curdt.time()
   #Are any offices open???
-  opentime = wkday
-  if wkdy_open[day] < hourmin  and hourmin < wkday_close[day]:
-    appt = []
-    non = []
+  if wkdy_open[day] < curtime  and curtime < wkdy_close[day]:
+    appt = np.full(len(appt_df.columns),np.nan) 
+    non =  np.full(len(non_df.columns),np.nan)
+    init = time.time()
     #Collect Data
-    for o in appt_df.columns:
-      if is_open(offices[o],curdt) and offices[o]['cQueue']:
-        oappt, onon = scrape(driver,o)
-        appt.append(oappt)
-        non.append(onon)
-      else:
-        appt.append(np.nan)
-        non.append(np.nan)
-    apptdf[curdt] = appt
-    apptdf[curdt] = non
+    for i,o in enumerate(appt_df.columns):
+      if oh.is_open(by_name[o],curdt) and by_name[o]['cQueue']:
+        oappt, onon = scrape.wait_times(driver,by_name[o]['number'])
+        appt[i] = oappt
+        non[i] = onon
+    appt_df.loc[curdt] = appt
+    non_df.loc[curdt] = non
     secs_to_sleep = invfrequency
   else:
     #Calculate sleep timer
     if curtime < wkdy_open[day]: #nothing open yet
       #When are they open?
       secs_to_sleep = (wkdy_open[day].hour-curtime.hour)*3600+(wkdy_open[day].minute-curtime.minute)*60
-    elif wkday_close[day] < curtime: # they are all closed
+    elif wkdy_close[day] < curtime: # they are all closed
       #When are they open again? (more complicated)
       to_midnight = 0
       if curtime.minute > 0:
         to_midnight = (23-curtime.hour)*3600+(60-curtime.minute)*60 
-      else
+      else:
         to_midnight = (24-curtime.hour)*3600
       if day != 6:
         next_day = day+1 
